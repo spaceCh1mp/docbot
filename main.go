@@ -38,12 +38,12 @@ func main() {
 	file, err := ioutil.ReadFile(filePath)
 	check(err)
 	//read file content to variable in format
-	msg := formatText(string(file))
-	fmt.Println(len(msg))
 	/* Day {day}
 	- Accomplished task
 	- Another Accomplished task
 	*/
+	msg := formatText(file)
+	fmt.Println(len(msg))
 	//get twitter access token from json file
 	//parse json file and assign values to the Token struct
 	tokenBytes, err := ioutil.ReadFile(tokenPath)
@@ -75,6 +75,6 @@ func validate(dir string) string {
 	return dir
 }
 
-func formatText(msg string) string {
-	return msg
+func formatText(msg []byte) string {
+	return string(msg)
 }
