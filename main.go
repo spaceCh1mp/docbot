@@ -14,7 +14,6 @@ const tokenPath string = "./token.json"
 type Token struct {
 	AccessToken string `json:"name"`
 	AccessPath  string `json:"password"`
-	AccessKey   string `json:"trell"`
 }
 
 func check(e error) {
@@ -38,9 +37,9 @@ func main() {
 	//open log file
 	file, err := ioutil.ReadFile(filePath)
 	check(err)
+	//read file content to variable in format
 	msg := formatText(string(file))
 	fmt.Println(len(msg))
-	//read file content to variable in format
 	/* Day {day}
 	- Accomplished task
 	- Another Accomplished task
