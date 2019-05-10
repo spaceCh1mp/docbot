@@ -5,10 +5,9 @@ import (
 	"io/ioutil"
 	"strconv"
 
-	"github.com/dghubble/oauth1"
-
-	"github.com/dghubble/go-twitter/twitter"
 	//vendor packages
+	"github.com/dghubble/go-twitter/twitter"
+	"github.com/dghubble/oauth1"
 )
 
 const AuthFile string = "./token.json"
