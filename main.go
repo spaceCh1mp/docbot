@@ -2,18 +2,31 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"strings"
+	"strconv"
+
+	"github.com/dghubble/oauth1"
+
+	"github.com/dghubble/go-twitter/twitter"
+	//vendor packages
 )
 
-const tokenPath string = "./token.json"
+const AuthFile string = "./token.json"
+const LogJson string = "./log/log.json"
+const Update string = "./log/update.txt"
 
-type Token struct {
-	AccessToken string `json:"name"`
-	AccessPath  string `json:"password"`
+type ID struct {
+	Consumer_key        string `json:"ConsumerKey"`
+	Consumer_secret     string `json:"ConsumerSecret"`
+	Access_token        string `json:"AccessToken"`
+	Access_token_secret string `json:"AccessTokenSecret"`
+}
+
+type Log struct {
+	LogId     string `json:"id"`
+	Text      string `json:"text"`
+	TimeStamp string `json:"time-stamp"`
 }
 
 func check(e error) {
@@ -23,58 +36,71 @@ func check(e error) {
 }
 
 func main() {
-	var dir string
-	fileDir := flag.String("dir", "./log/", "Program defaults to ./log/ when no file path is specified")
-	fileName := flag.String("name", "", "No value is set for the name flag and must be specified")
-	rel := flag.Bool("rel", true, "file path is relative by default, set this flag to false to set a path from your home directory")
-	flag.Parse()
-	if !(*rel) {
-		dir = validate(*fileDir) + *fileName
-	} else {
-		dir = *fileDir + *fileName
-	}
-	filePath := Path(dir, *rel)
-	//open log file
-	file, err := ioutil.ReadFile(filePath)
+	var (
+		id          ID
+		l           []Log
+		updateParam twitter.StatusUpdateParams
+	)
+
+	//read update log file
+	file, err := ioutil.ReadFile(Update)
 	check(err)
-	//read file content to variable in format
-	/* Day {day}
-	- Accomplished task
-	- Another Accomplished task
-	*/
 	msg := formatText(file)
-	fmt.Println(len(msg))
+
 	//get twitter access token from json file
 	//parse json file and assign values to the Token struct
-	tokenBytes, err := ioutil.ReadFile(tokenPath)
+	idBytes, err := ioutil.ReadFile(AuthFile)
 	check(err)
-	var t Token
-	json.Unmarshal(tokenBytes, &t)
+	json.Unmarshal(idBytes, &id)
+	//set update parameters
+	//when id is null and for last log id
+	logBytes, err := ioutil.ReadFile(LogJson)
+	check(err)
+
+	json.Unmarshal(logBytes, &l)
+	logSize := len(l)
+	if logSize > 0 {
+		ToReply, err := strconv.Atoi(l[logSize-1].LogId)
+		check(err)
+
+		updateParam.InReplyToStatusID = int64(ToReply)
+	}
 	//pass values to http request and hit api endpoint
-
-}
-
-func Path(dir string, dirType bool) string {
-	if !dirType {
-		home, _ := os.UserHomeDir()
-		return home + dir
-	}
-	return dir
-}
-
-func validate(dir string) string {
-	pref, suff := strings.HasPrefix(dir, "/"), strings.HasSuffix(dir, "/")
-	if !(pref) || !(suff) {
-		if !(pref) {
-			dir = "/" + dir
+	client, err := SetClient(id)
+	check(err)
+	tweet, _, err := client.Statuses.Update(msg, func() *twitter.StatusUpdateParams {
+		if updateParam.InReplyToStatusID == 0 {
+			return nil
 		}
-		if !(suff) {
-			dir += "/"
-		}
+		return &updateParam
+	}())
+	check(err)
+	fmt.Println(tweet.Text)
+	//add tweet to recent log
+	newTweet := Log{
+		LogId:     tweet.IDStr,
+		Text:      tweet.Text,
+		TimeStamp: tweet.CreatedAt,
 	}
-	return dir
+	l = append(l, newTweet)
+	//marshal log
+	log, err := json.Marshal(l)
+	check(err)
+	//write new log to json file for future ref
+	err = ioutil.WriteFile(LogJson, log, 0644)
+	check(err)
 }
 
 func formatText(msg []byte) string {
 	return string(msg)
+}
+
+func SetClient(t ID) (*twitter.Client, error) {
+	config := oauth1.NewConfig(t.Consumer_key, t.Consumer_secret)
+	_token := oauth1.NewToken(t.Access_token, t.Access_token_secret)
+
+	httpClient := config.Client(oauth1.NoContext, _token)
+	client := twitter.NewClient(httpClient)
+
+	return client, nil
 }
