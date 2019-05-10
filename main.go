@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -45,15 +44,14 @@ func main() {
 	//read update log file
 	file, err := ioutil.ReadFile(Update)
 	check(err)
-	msg := formatText(file)
+	msg := string(file)
 
 	//get twitter access token from json file
-	//parse json file and assign values to the Token struct
 	idBytes, err := ioutil.ReadFile(AuthFile)
 	check(err)
 	json.Unmarshal(idBytes, &id)
+
 	//set update parameters
-	//when id is null and for last log id
 	logBytes, err := ioutil.ReadFile(LogJson)
 	check(err)
 
@@ -65,7 +63,7 @@ func main() {
 
 		updateParam.InReplyToStatusID = int64(ToReply)
 	}
-	//pass values to http request and hit api endpoint
+
 	client, err := SetClient(id)
 	check(err)
 	tweet, _, err := client.Statuses.Update(msg, func() *twitter.StatusUpdateParams {
@@ -75,24 +73,18 @@ func main() {
 		return &updateParam
 	}())
 	check(err)
-	fmt.Println(tweet.Text)
-	//add tweet to recent log
 	newTweet := Log{
 		LogId:     tweet.IDStr,
 		Text:      tweet.Text,
 		TimeStamp: tweet.CreatedAt,
 	}
 	l = append(l, newTweet)
-	//marshal log
+
 	log, err := json.Marshal(l)
 	check(err)
-	//write new log to json file for future ref
+
 	err = ioutil.WriteFile(LogJson, log, 0644)
 	check(err)
-}
-
-func formatText(msg []byte) string {
-	return string(msg)
 }
 
 func SetClient(t ID) (*twitter.Client, error) {
