@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"strconv"
 
 	//vendor packages
@@ -43,7 +44,7 @@ func main() {
 	//read update log file
 	file, err := ioutil.ReadFile(Update)
 	check(err)
-	msg := string(file)
+	msg := formatText(file)
 
 	//get twitter access token from json file
 	idBytes, err := ioutil.ReadFile(AuthFile)
@@ -94,4 +95,12 @@ func SetClient(t ID) (*twitter.Client, error) {
 	client := twitter.NewClient(httpClient)
 
 	return client, nil
+}
+
+func formatText(m []byte) string {
+	msg := string(m)
+	if len(msg) > 280 {
+		log.Fatalln("Tweet is too long")
+	}
+	return msg
 }
